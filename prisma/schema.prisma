@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String?
+  youtubeChannelId  String?
+  youtubeToken      Json?
+  whopUserId        String?  @unique
+  subscription      String   @default("free") // free, pro, enterprise
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  clips             Clip[]
+  uploads           Upload[]
+}
+
+model Clip {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  // Source video
+  sourceUrl     String
+  sourceTitle   String
+  videoDuration Int      // seconds
+  
+  // Clip settings
+  startTime     Float
+  endTime       Float
+  aspectRatio   String   @default("9:16")
+  
+  // Captions
+  captionStyle  Json     // font, color, position, animation
+  captionText   String?  @db.Text
+  
+  // AI Generated
+  aiHook        String?
+  aiTitle       String?
+  aiDescription String?  @db.Text
+  aiTags        String[] // array of tags
+  
+  // Processing
+  status        String   @default("pending") // pending, processing, completed, failed
+  processedUrl  String?
+  thumbnailUrl  String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  uploads       Upload[]
+  
+  @@index([userId, createdAt])
+}
+
+model Upload {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  clipId          String
+  clip            Clip     @relation(fields: [clipId], references: [id])
+  
+  youtubeVideoId  String?
+  youtubeUrl      String?
+  status          String   @default("pending") // pending, uploading, published, failed
+  visibility      String   @default("public") // public, private, unlisted
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId, createdAt])
+}
